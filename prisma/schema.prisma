@@ -1,0 +1,64 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Mission {
+  id             String     @id @default(cuid())
+  name           String
+  // External references (from another database)
+  deploymentId   String
+  deploymentData Json?
+  zoneId         String
+  zoneData       Json?
+  waypoints      Waypoint[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([deploymentId, name])
+  @@index([deploymentId])
+  @@index([zoneId])
+}
+
+model Waypoint {
+  id        String   @id @default(cuid())
+  pointId   String
+  label     String
+  order     Int?
+  missionId String
+  mission   Mission  @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  tasks     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([missionId, pointId])
+  @@index([missionId])
+}
+
+// New models for Scheduler feature
+model Scheduler {
+  id            String   @id @default(cuid())
+  schedulerName String
+  deploymentId  String
+  zoneId        String
+  missionIds    String[] // renamed from assignments
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([deploymentId, schedulerName])
+  @@index([deploymentId])
+  @@index([zoneId])
+}
