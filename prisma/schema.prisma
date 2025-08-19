@@ -19,7 +19,7 @@ model User {
 model Mission {
   id             String     @id @default(cuid())
   name           String
-  // External references (from another database)
+  missionId      String     @unique
   deploymentId   String
   deploymentData Json?
   zoneId         String
@@ -50,15 +50,15 @@ model Waypoint {
 
 // New models for Scheduler feature
 model Scheduler {
-  id            String   @id @default(cuid())
-  schedulerName String
-  deploymentId  String
-  zoneId        String
-  missionIds    String[] // renamed from assignments
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  schedulerName   String
+  schedulerId     String   @unique
+  deploymentId    String
+  zoneId          String
+  missionIds      String[]
+  schedulerOption Json
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now())
 
   @@unique([deploymentId, schedulerName])
-  @@index([deploymentId])
-  @@index([zoneId])
 }

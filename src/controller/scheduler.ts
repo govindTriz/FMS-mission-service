@@ -13,10 +13,11 @@ export const SchedulerCreateSchema = z.object({
 
 export const SchedulerUpdateSchema = z.object({
   schedulerName: z.string().min(1).optional(),
-  deploymentId: z.string().min(1),
+  schedulerId: z.string().min(1).optional(),
+  deploymentId: z.string().min(1).optional(),
   zoneId: z.string().min(1).optional(),
   missionIds: z.array(z.string().cuid()).optional(),
-  schedulerOption: json(),
+  schedulerOption: json().optional(),
 });
 
 export const SchedulerIdParamSchema = z.object({ id: z.string().cuid() });
@@ -105,8 +106,13 @@ export async function updateScheduler(
     const data: any = {};
     if (input.schedulerName !== undefined)
       data.schedulerName = input.schedulerName;
+    if (input.schedulerId !== undefined) data.schedulerId = input.schedulerId;
+    if (input.deploymentId !== undefined)
+      data.deploymentId = input.deploymentId;
     if (input.zoneId !== undefined) data.zoneId = input.zoneId;
-    if (input.missionIds !== undefined) data.missionIds = input.missionIds; // replace whole array
+    if (input.missionIds !== undefined) data.missionIds = input.missionIds;
+    if (input.schedulerOption !== undefined)
+      data.schedulerOption = input.schedulerOption;
 
     const updated = await prisma.scheduler.update({
       where: { id },
