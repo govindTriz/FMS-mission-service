@@ -31,6 +31,22 @@ export const UpdateMissionSchema = z.object({
 
 export const IdParamSchema = z.object({ id: z.string().cuid() });
 
+export const missions = z.object({
+  id: z.string().min(1),
+  missionId: z.string().min(1),
+  missionName: z.string().min(1),
+  waypoints: z.array(WaypointInput),
+});
+
+export const assignMissionSchema = z.object({
+  deploymentId: z.string().min(1),
+  zoneId: z.string().min(1),
+  missionName: z.string().min(1),
+  missionId: z.string().min(1),
+  schedulerId: z.string().min(1),
+  missions: missions.array(),
+});
+
 export async function listMissions(query: {
   deploymentId?: string;
   zoneId?: string;
@@ -104,9 +120,13 @@ export async function createMission(
     if (err.code === "P2002") {
       const target = err.meta?.target;
       const key = Array.isArray(target) ? target.join(", ") : target;
-      throw new AppError(`Duplicate entry for unique field(s): ${key.toUpperCase()}`, 409, {
-        target,
-      });
+      throw new AppError(
+        `Duplicate entry for unique field(s): ${key.toUpperCase()}`,
+        409,
+        {
+          target,
+        }
+      );
     }
     throw err;
   }
@@ -164,6 +184,62 @@ export async function deleteMission(id: string) {
     await prisma.mission.delete({ where: { id } });
   } catch (err: any) {
     if (err.code === "P2025") throw new AppError("Mission not found", 404);
+    throw err;
+  }
+}
+
+export async function assignMission(
+  input: z.infer<typeof assignMissionSchema>
+) {
+  try {
+    // 1. Ensure the scheduler exists
+    const scheduler = await prisma.scheduler.findUnique({
+      where: { id: input.schedulerId },
+    });
+    if (!scheduler) throw new AppError("Scheduler not found", 404);
+
+    // 2. For each mission in the payload
+    for (const missionInput of input.missions) {
+      // Upsert the mission (by missionId)
+      const mission = await prisma.mission.upsert({
+        where: { missionId: missionInput.missionId },
+        update: {
+          name: missionInput.missionName,
+        },
+        create: {
+          name: missionInput.missionName,
+          missionId: missionInput.missionId,
+          deploymentId: input.deploymentId,
+          zoneId: input.zoneId,
+          waypoints: {
+            create: missionInput.waypoints.map((w) => ({
+              pointId: w.pointId,
+              label: w.label,
+              order: w.order,
+              tasks: w.tasks !== undefined ? w.tasks : {}, // <-- Ensure tasks is always present
+            })),
+          },
+        },
+      });
+
+      // 3. Create or update the AssignedMission link
+      await prisma.assignedMission.upsert({
+        where: {
+          schedulerId_missionId: {
+            schedulerId: input.schedulerId,
+            missionId: mission.id, // Use the DB id, not missionId string
+          },
+        },
+        update: {},
+        create: {
+          schedulerId: input.schedulerId,
+          missionId: mission.id,
+        },
+      });
+    }
+
+    return { success: true };
+  } catch (err: any) {
     throw err;
   }
 }

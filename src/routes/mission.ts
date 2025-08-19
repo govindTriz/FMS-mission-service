@@ -10,6 +10,8 @@ import {
   createMission,
   updateMission,
   deleteMission,
+  assignMission,
+  assignMissionSchema,
 } from "../controller/mission";
 
 const router = Router();
@@ -76,5 +78,18 @@ router.delete("/:id", validateParams(IdParamSchema), async (req, res, next) => {
     next(err);
   }
 });
+
+router.post(
+  "/assign-mission",
+  validateBody(assignMissionSchema),
+  async (req, res, next) => {
+    try {
+      const assigned = await assignMission(req.body);
+      res.status(201).json(assigned);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export default router;

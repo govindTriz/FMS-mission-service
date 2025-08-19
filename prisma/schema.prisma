@@ -17,16 +17,17 @@ model User {
 }
 
 model Mission {
-  id             String     @id @default(cuid())
-  name           String
-  missionId      String     @unique
-  deploymentId   String
-  deploymentData Json?
-  zoneId         String
-  zoneData       Json?
-  waypoints      Waypoint[]
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+  id              String            @id @default(cuid())
+  name            String
+  missionId       String            @unique
+  deploymentId    String
+  deploymentData  Json?
+  zoneId          String
+  zoneData        Json?
+  waypoints       Waypoint[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  AssignedMission AssignedMission[]
 
   @@unique([deploymentId, name])
   @@index([deploymentId])
@@ -50,15 +51,28 @@ model Waypoint {
 
 // New models for Scheduler feature
 model Scheduler {
-  id              String   @id @default(cuid())
+  id              String            @id @default(cuid())
   schedulerName   String
-  schedulerId     String   @unique
+  schedulerId     String            @unique
   deploymentId    String
   zoneId          String
   missionIds      String[]
   schedulerOption Json
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now())
+  AssignedMission AssignedMission[]
 
   @@unique([deploymentId, schedulerName])
+}
+
+model AssignedMission {
+  id          String    @id @default(cuid())
+  scheduler   Scheduler @relation(fields: [schedulerId], references: [id], onDelete: Cascade)
+  schedulerId String
+  mission     Mission   @relation(fields: [missionId], references: [id], onDelete: Cascade)
+  missionId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now())
+
+  @@unique([schedulerId, missionId])
 }
