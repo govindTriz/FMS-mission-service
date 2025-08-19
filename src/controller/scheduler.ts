@@ -1,18 +1,22 @@
 import { prisma } from "../services/db";
-import { z } from "zod";
+import { json, z } from "zod";
 import { AppError } from "../middleware/errorHandler";
 
 export const SchedulerCreateSchema = z.object({
   schedulerName: z.string().min(1),
+  schedulerId: z.string().min(1),
   deploymentId: z.string().min(1),
   zoneId: z.string().min(1),
   missionIds: z.array(z.string().cuid()).default([]),
+  schedulerOption: json(),
 });
 
 export const SchedulerUpdateSchema = z.object({
   schedulerName: z.string().min(1).optional(),
+  deploymentId: z.string().min(1),
   zoneId: z.string().min(1).optional(),
   missionIds: z.array(z.string().cuid()).optional(),
+  schedulerOption: json(),
 });
 
 export const SchedulerIdParamSchema = z.object({ id: z.string().cuid() });
@@ -63,17 +67,25 @@ export async function createScheduler(
     const scheduler = await prisma.scheduler.create({
       data: {
         schedulerName: input.schedulerName,
+        schedulerId: input.schedulerId,
         deploymentId: input.deploymentId,
         zoneId: input.zoneId,
         missionIds: input.missionIds, // store array directly
+        schedulerOption: input.schedulerOption || {},
       },
     });
     return scheduler;
   } catch (err: any) {
     if (err.code === "P2002") {
-      throw new AppError("Duplicate scheduler for deployment", 409, {
-        target: err.meta?.target,
-      });
+      const target = err.meta?.target;
+      const key = Array.isArray(target) ? target.join(", ") : target;
+      throw new AppError(
+        `Duplicate entry for unique field(s): ${key.toUpperCase()}`,
+        409,
+        {
+          target,
+        }
+      );
     }
     if (err.code === "P2003") {
       throw new AppError("Invalid missionId in assignments", 400);
@@ -91,7 +103,8 @@ export async function updateScheduler(
 
   try {
     const data: any = {};
-    if (input.schedulerName !== undefined) data.schedulerName = input.schedulerName;
+    if (input.schedulerName !== undefined)
+      data.schedulerName = input.schedulerName;
     if (input.zoneId !== undefined) data.zoneId = input.zoneId;
     if (input.missionIds !== undefined) data.missionIds = input.missionIds; // replace whole array
 

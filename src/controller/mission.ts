@@ -12,6 +12,7 @@ export const WaypointInput = z.object({
 
 export const CreateMissionSchema = z.object({
   name: z.string().min(1),
+  missionId: z.string().min(1),
   deploymentId: z.string().min(1),
   deploymentData: z.any().optional(),
   zoneId: z.string().min(1),
@@ -21,6 +22,7 @@ export const CreateMissionSchema = z.object({
 
 export const UpdateMissionSchema = z.object({
   name: z.string().min(1).optional(),
+  missionId: z.string().min(1),
   deploymentData: z.any().optional(),
   zoneData: z.any().optional(),
   // If provided, will replace all existing waypoints
@@ -77,6 +79,7 @@ export async function createMission(
     const mission = await prisma.mission.create({
       data: {
         name: input.name,
+        missionId: input.missionId,
         deploymentId: input.deploymentId,
         deploymentData: input.deploymentData,
         zoneId: input.zoneId,
@@ -97,8 +100,13 @@ export async function createMission(
     return mission;
   } catch (err: any) {
     // Unique constraint: mission name per deployment or waypoint duplicate
+
     if (err.code === "P2002") {
-      throw new AppError("Duplicate entry", 409, { target: err.meta?.target });
+      const target = err.meta?.target;
+      const key = Array.isArray(target) ? target.join(", ") : target;
+      throw new AppError(`Duplicate entry for unique field(s): ${key.toUpperCase()}`, 409, {
+        target,
+      });
     }
     throw err;
   }
