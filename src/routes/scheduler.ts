@@ -10,6 +10,9 @@ import {
   createScheduler,
   updateScheduler,
   deleteScheduler,
+  assignScheduler,
+  AssignSchedulerSchema,
+  getAssignedSchedulerAsset,
 } from "../controller/scheduler";
 
 const router = Router();
@@ -88,5 +91,27 @@ router.delete(
     }
   }
 );
+
+router.post(
+  "/assign-scheduler",
+  validateBody(AssignSchedulerSchema),
+  async (req, res, next) => {
+    try {
+      const result = await assignScheduler(req.body);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.get("/assigned-asset/:schedulerId", async (req, res, next) => {
+  try {
+    const asset = await getAssignedSchedulerAsset(req.params.schedulerId);
+    res.json(asset);
+  } catch (err) {
+    next(err);
+  }
+});
 
 export default router;

@@ -14,10 +14,10 @@ ALTER TABLE "public"."AssignedMission" DROP CONSTRAINT "AssignedMission_missionI
 ALTER TABLE "public"."AssignedMission" DROP CONSTRAINT "AssignedMission_schedulerId_fkey";
 
 -- DropIndex
-DROP INDEX "public"."Mission_missionId_key";
+ALTER TABLE "Mission" DROP CONSTRAINT "Mission_missionId_key";
 
 -- DropIndex
-DROP INDEX "public"."Scheduler_schedulerId_key";
+ALTER TABLE "public"."Scheduler" DROP CONSTRAINT "Scheduler_schedulerId_key";
 
 -- AlterTable
 ALTER TABLE "public"."Mission" DROP COLUMN "missionId";

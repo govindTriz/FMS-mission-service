@@ -73,6 +73,10 @@ export async function listMissions(query: {
     prisma.mission.count({ where }),
   ]);
 
+  if (total === 0) {
+    throw new AppError("No missions found for the given criteria", 404);
+  }
+
   return { items, total, skip, take };
 }
 
@@ -219,21 +223,6 @@ export async function assignMission(
               tasks: w.tasks !== undefined ? w.tasks : {}, // <-- Ensure tasks is always present
             })),
           },
-        },
-      });
-
-      // 3. Create or update the AssignedMission link
-      await prisma.assignedMission.upsert({
-        where: {
-          schedulerId_missionId: {
-            schedulerId: input.schedulerId,
-            missionId: mission.id, // Use the DB id, not missionId string
-          },
-        },
-        update: {},
-        create: {
-          schedulerId: input.schedulerId,
-          missionId: mission.id,
         },
       });
     }

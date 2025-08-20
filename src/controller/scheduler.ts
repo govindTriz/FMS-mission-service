@@ -20,6 +20,18 @@ export const SchedulerUpdateSchema = z.object({
   schedulerOption: json().optional(),
 });
 
+export const AssetInput = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+});
+
+export const AssignSchedulerSchema = z.object({
+  deploymentId: z.string().min(1),
+  zoneId: z.string().min(1),
+  schedulerId: z.string().min(1),
+  assets: z.array(AssetInput),
+});
+
 export const SchedulerIdParamSchema = z.object({ id: z.string().cuid() });
 
 function uniqueMissionIds(ids: string[]) {
@@ -49,6 +61,10 @@ export async function listSchedulers(query: {
     }),
     prisma.scheduler.count({ where }),
   ]);
+
+  if (total === 0) {
+    throw new AppError("No schedulers found for the given criteria", 404);
+  }
 
   return { items, total, skip, take };
 }
@@ -139,4 +155,40 @@ export async function deleteScheduler(id: string) {
     if (err.code === "P2025") throw new AppError("Scheduler not found", 404);
     throw err;
   }
+}
+
+export async function assignScheduler(
+  input: z.infer<typeof AssignSchedulerSchema>
+) {
+  // Ensure scheduler exists
+  const scheduler = await prisma.scheduler.findUnique({
+    where: { id: input.schedulerId },
+  });
+  if (!scheduler) throw new AppError("Scheduler not found", 404);
+
+  // Upsert AssignedAsset for this scheduler
+  await prisma.assignedSchedulerAsset.upsert({
+    where: { schedulerId: input.schedulerId },
+    update: {
+      assets: input.assets, // Save assets as JSON
+      deploymentId: input.deploymentId,
+      zoneId: input.zoneId,
+    },
+    create: {
+      schedulerId: input.schedulerId,
+      assets: input.assets,
+      deploymentId: input.deploymentId,
+      zoneId: input.zoneId,
+    },
+  });
+
+  return { success: true };
+}
+
+export async function getAssignedSchedulerAsset(schedulerId: string) {
+  const asset = await prisma.assignedSchedulerAsset.findUnique({
+    where: { schedulerId },
+  });
+  if (!asset) throw new AppError("AssignedSchedulerAsset not found", 404);
+  return asset;
 }
