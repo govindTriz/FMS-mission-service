@@ -9,6 +9,7 @@ export const SchedulerCreateSchema = z.object({
   zoneId: z.string().min(1),
   missionIds: z.array(z.string().cuid()).default([]),
   schedulerOption: json(),
+  customerId: z.string().min(1),
 });
 
 export const SchedulerUpdateSchema = z.object({
@@ -30,6 +31,7 @@ export const AssignSchedulerSchema = z.object({
   zoneId: z.string().min(1),
   schedulerId: z.string().min(1),
   assets: z.array(AssetInput),
+  customerId: z.string().min(1),
 });
 
 export const SchedulerIdParamSchema = z.object({ id: z.string().cuid() });
@@ -39,6 +41,7 @@ function uniqueMissionIds(ids: string[]) {
 }
 
 export async function listSchedulers(query: {
+  customerId?: string;
   deploymentId?: string;
   zoneId?: string;
   schedulerName?: string;
@@ -47,6 +50,10 @@ export async function listSchedulers(query: {
 }) {
   const { deploymentId, zoneId, schedulerName, skip = 0, take = 50 } = query;
   const where: any = {};
+  if (!query.customerId) {
+    throw new AppError("Customer ID is required", 400);
+  }
+  if (query.customerId) where.customerId = query.customerId;
   if (deploymentId) where.deploymentId = deploymentId;
   if (zoneId) where.zoneId = zoneId;
   if (schedulerName)
@@ -69,9 +76,9 @@ export async function listSchedulers(query: {
   return { items, total, skip, take };
 }
 
-export async function getScheduler(id: string) {
+export async function getScheduler(id: string, customerId?: string) {
   const scheduler = await prisma.scheduler.findUnique({
-    where: { id },
+    where: { id, customerId },
   });
   if (!scheduler) throw new AppError("Scheduler not found", 404);
   return scheduler;
@@ -89,6 +96,7 @@ export async function createScheduler(
         zoneId: input.zoneId,
         missionIds: input.missionIds, // store array directly
         schedulerOption: input.schedulerOption || {},
+        customerId: input.customerId,
       },
     });
     return scheduler;
@@ -179,15 +187,22 @@ export async function assignScheduler(
       assets: input.assets,
       deploymentId: input.deploymentId,
       zoneId: input.zoneId,
+      customerId: input.customerId,
     },
   });
 
   return { success: true };
 }
 
-export async function getAssignedSchedulerAsset(schedulerId: string) {
+export async function getAssignedSchedulerAsset(
+  schedulerId: string,
+  customerId?: string
+) {
+  if (!customerId) {
+    throw new AppError("Customer ID is required", 400);
+  }
   const asset = await prisma.assignedSchedulerAsset.findUnique({
-    where: { schedulerId },
+    where: { schedulerId, customerId },
   });
   if (!asset) throw new AppError("AssignedSchedulerAsset not found", 404);
   return asset;

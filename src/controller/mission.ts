@@ -18,6 +18,7 @@ export const CreateMissionSchema = z.object({
   zoneId: z.string().min(1),
   zoneData: z.any().optional(),
   waypoints: z.array(WaypointInput).default([]),
+  customerId: z.string().min(1),
 });
 
 export const UpdateMissionSchema = z.object({
@@ -45,17 +46,23 @@ export const assignMissionSchema = z.object({
   missionId: z.string().min(1),
   schedulerId: z.string().min(1),
   missions: missions.array(),
+  customerId: z.string().min(1),
 });
 
 export async function listMissions(query: {
+  customerId?: string;
   deploymentId?: string;
   zoneId?: string;
   name?: string;
   skip?: number;
   take?: number;
 }) {
-  const { deploymentId, zoneId, name, skip = 0, take = 50 } = query;
+  const { customerId, deploymentId, zoneId, name, skip = 0, take = 50 } = query;
+  if (!customerId) {
+    throw new AppError("Customer ID is required", 400);
+  }
   const where: any = {};
+  if (customerId) where.customerId = customerId;
   if (deploymentId) where.deploymentId = deploymentId;
   if (zoneId) where.zoneId = zoneId;
   if (name) where.name = { contains: name, mode: "insensitive" };
@@ -80,9 +87,12 @@ export async function listMissions(query: {
   return { items, total, skip, take };
 }
 
-export async function getMission(id: string) {
+export async function getMission(id: string, customerId?: string) {
+  if (!customerId) {
+    throw new AppError("Customer ID is required", 400);
+  }
   const mission = await prisma.mission.findUnique({
-    where: { id },
+    where: { id, customerId },
     include: {
       waypoints: { orderBy: [{ order: "asc" }, { createdAt: "asc" }] },
     },
@@ -104,8 +114,10 @@ export async function createMission(
         deploymentData: input.deploymentData,
         zoneId: input.zoneId,
         zoneData: input.zoneData,
+        customerId: input.customerId,
         waypoints: {
           create: input.waypoints.map((w) => ({
+            customerId: input.customerId,
             pointId: w.pointId,
             label: w.label,
             order: w.order,
@@ -215,8 +227,10 @@ export async function assignMission(
           missionId: missionInput.missionId,
           deploymentId: input.deploymentId,
           zoneId: input.zoneId,
+          customerId: input.customerId,
           waypoints: {
             create: missionInput.waypoints.map((w) => ({
+              customerId: input.customerId,
               pointId: w.pointId,
               label: w.label,
               order: w.order,

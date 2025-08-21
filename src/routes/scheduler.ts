@@ -21,6 +21,7 @@ const router = Router();
 router.get("/", async (req, res, next) => {
   try {
     const querySchema = z.object({
+      customerId: z.string().optional(),
       deploymentId: z.string().optional(),
       zoneId: z.string().optional(),
       schedulerName: z.string().optional(),
@@ -41,7 +42,7 @@ router.get(
   validateParams(SchedulerIdParamSchema),
   async (req, res, next) => {
     try {
-      const item = await getScheduler(req.params.id);
+      const item = await getScheduler(req.params.id, req.params.customerId);
       res.json(item);
     } catch (err) {
       next(err);
@@ -107,7 +108,10 @@ router.post(
 
 router.get("/assigned-asset/:schedulerId", async (req, res, next) => {
   try {
-    const asset = await getAssignedSchedulerAsset(req.params.schedulerId);
+    const asset = await getAssignedSchedulerAsset(
+      req.params.schedulerId,
+      req.query.customerId as string | undefined
+    );
     res.json(asset);
   } catch (err) {
     next(err);

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { z } from "zod";
+import { custom, z } from "zod";
 import { validateBody, validateParams } from "../middleware/validate";
 import {
   CreateMissionSchema,
@@ -20,6 +20,7 @@ const router = Router();
 router.get("/", async (req, res, next) => {
   try {
     const querySchema = z.object({
+      customerId: z.string().optional(),
       deploymentId: z.string().optional(),
       zoneId: z.string().optional(),
       name: z.string().optional(),
@@ -37,7 +38,7 @@ router.get("/", async (req, res, next) => {
 // Get mission by id
 router.get("/:id", validateParams(IdParamSchema), async (req, res, next) => {
   try {
-    const mission = await getMission(req.params.id);
+    const mission = await getMission(req.params.id, req.params.customerId);
     res.json(mission);
   } catch (err) {
     next(err);
