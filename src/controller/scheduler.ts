@@ -65,6 +65,9 @@ export async function listSchedulers(query: {
       orderBy: { createdAt: "desc" },
       skip,
       take,
+      include: {
+        AssignedAsset: true,
+      },
     }),
     prisma.scheduler.count({ where }),
   ]);
